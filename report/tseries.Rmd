@@ -1,0 +1,298 @@
+---
+title: "tseries"
+author: "Jose Luis Contreras Santos and Antonio Javier González Ferrer"
+header-includes:
+- \usepackage{float}
+- \usepackage{hyperref}
+date: "December 21st, 2016"
+output:
+html_document: 
+fig_caption: true
+keep_tex: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.pos = 'H')
+setwd("D:/Google Drive/EIT/Intelligent Data Analysis/homeworks/homework_set3/report")
+```
+## Loading the data
+```{r load, message=FALSE, warning=FALSE}
+library(forecast)
+library(astsa)
+library(tseries)
+library(car)
+library(astsa)
+source("../src/getBestArima.R")
+
+visados.df <- read.csv("../data/data_g2.csv", header=T, sep=",", stringsAsFactors = FALSE)
+# Create a Time Series object, starting from 1997 and seasonal data.
+visados.ts <- ts(visados.df$Visados, start=c(1997,1), end=c(2013, 8), frequency = 12)
+```
+
+## Part 1
+
+Jose
+<!---
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+-->
+
+## Part 2
+
+Decomposition methods describe the trend and seasonal factors in a time series. We will use this information for understanding the data at hand before building a more sophisticated model, for instance, an ARIMA model.
+
+The Multiplicative decomposition is one of the basic decomposition methods and it is useful when the seasonal variance of the data increases over time. As we will see in section X, such hypothesis will be closer to the structure of the dataset than the simple Additive decomposition. The Multiplicative decomposition method is defined as follows:
+
+<center>$$x_t = T_t * S_t * I_t$$</center>
+
+
+where $x_t$ is the time series at time $t$, $T_t$ is the trend, $S_t$ is the seasonality and $I_t$ is the irregular part or remainder. Essentially, the goal is to find a decomposition such that the remainder behaves like white noise, that is to say, the remainder acts as a stationary time series by itself.
+
+There are different ways to model the trend and the seasonality components. R provides the <i>stl()</i> function for seasonal decomposition of time series based on LOESS, a smoothing procedure that is based on local, weighted robust regression. The aim of this procedure is to reduce potentially the disturbing influence of outliers. By default, the command <i>stl()</i> performs an additive decomposition but it can be easily transformed to a multiplicative decomposition taking logarithm of the input data.
+
+
+```{r decomposition, fig.align='center', fig.width=6, fig.height=4, fig.cap="Pedro picapiedra"}
+# Multiplicative decomposition
+visados.stl <- stl(log(visados.ts), s.window="periodic")
+plot(visados.stl)
+```
+
+The second parameter essentially controls the seasonal effects to be estimated in as averages of de-trended values. The plot shows the observed series, the seasonal pattern, the smoothed trend line,  and the remainder part of the series. Note that the seasonal pattern is a regularly repeating pattern. The grey bars facilitate the interpretation by covering the same span of the $y$-scale in all the charts. 
+
+Nevertheless, the remainder does not look like white noise. Looking at the ACF plot, some significant autocorrelation coefficients can be distinguished outside the limits. Then, there is still information left in the remainder that should be used in computing forecasts. 
+```{r remainder, fig.align='center', fig.width=6, fig.height=4, fig.cap="Pedro picapiedra"}
+# Extracting and ploting the remainder part.
+visados.stl.remainder <- visados.stl$time.series[,c("remainder")]
+tsdisplay(visados.stl.remainder)
+```
+
+The further assumption is checked using the Box-Pierce test for examining the null hypothesis of independence in the remainder. The $p$-value is close to 0 and hence there exist significant autocorrelations for the first 12 lags.
+
+```{r box-test}
+# Box-Pierce test for independence of a time series.
+Box.test(visados.stl.remainder, lag=12) 
+```
+
+Let us forecast future values based on the last analysis of the trend and seasonal factors. 
+
+```{r forecast, fig.align='center', fig.width=6, fig.height=4, fig.cap="Pedro picapiedra"}
+plot(forecast(visados.stl, method="naive"))
+```
+
+
+<!-- If there are space, plotting the original series and the seasonal adjusted one, to see the trend
+```{r real_vs_estimated}
+par(mfrow=c(2,1))
+plot(visados.ts)
+plot(exp(seasadj(visados.stl))) 
+```  
+-->
+
+
+## Part 3
+
+### Description
+
+blablabla ARIMA blablbla
+
+### Data transformation
+
+First of all, let us decide on whether to use the original variable or to work with the log transformation of it. The log transformation might improve the stationary of the time series. We will select the latter option if the amplitude of the seasional changes increases with the overall trend, that is, if the variance is not constant across the series. In the following figure you can observe that the shape of the log plot is smoother and its variance is more stable than the original variable. Therefore we will use the log of the house sales variable from now on. Notice that the Box Cox transformation suggests to use a lambda close to 0 too.
+
+```{r variance, fig.align='center', fig.width=6, fig.height=4, fig.cap="Pedro picapiedra", echo=FALSE}
+par(mfrow=c(2,1))
+plot(visados.ts)
+plot(log(visados.ts))
+```
+
+```{r par_hidden, echo=FALSE}
+par(mfrow=c(1,1))
+```
+```{r boxcox, include=FALSE}
+# Which lamba to use to transform the variable.
+BoxCox.lambda(visados.ts, lower=0, upper=2)
+```
+
+### Seasonality
+
+The nature of the dataset leads us to think about setting an anual seasonal component, $s=12$. However, analyzing the periodogram of the below figure, we cannot observe an evident seasonal component. The high peak at point 0 of the $x$-axis is related to a long, infinite repeated cycle over the time. The next highest peak should be at point 1 to observe a 12-monthly seasonality, but this is not the case. On the other hand, the <i>seasonplot()</i> and <i>monthplot()</i> functions might help us identifying this lack of seasonality. Firstly, the seasonal plot shows how the ups and downs are similar over the years, being the lines near to be parallel. Secondly, the month plot reveals a strong seasonal pattern in August, where the sales decay. This drop should be adjusted into the model if we would like to see whether there is a real trend if the house sales go down in August. 
+
+Should we consider a whole seasonal component just for this August change? Based on the last hypothesis, we should say no. However, as we will see in the following section, there exist a clear fact to assume seasionality.
+```{r periodogram, fig.align='center', fig.width=6, fig.height=4, include=TRUE}
+tsdisplay(log(visados.ts), plot.type = "spectrum")
+```
+
+<!--
+\begin{figure}[H]
+\centering
+\includegraphics[width=4in]{figures/periodogram.png} 
+\caption{Periodogram of log(visados.ts)}
+\label{fig:periodogram}
+\end{figure}
+-->
+
+
+
+```{r seasonality, fig.align='center', fig.width=10, fig.height=4}
+par(mfrow=c(1,2))
+seasonplot(log(visados.ts))
+monthplot(log(visados.ts))
+```
+
+### Differencing
+
+The next step in fitting an ARIMA model is to detect the order of differencing needed to make the time series stationary. We will employ the <i>adf.test</i> to check stationarity and the standard deviation values to set the stop condition (the lower, the better.)
+
+Let us suppose that we omit the seasonality analysis from the last section. Since the original ACF plot (Figure X) has positive autocorrelations out to a high number of lags, we will apply one order of diferencing.
+```{r first_difference, warning=FALSE}
+# Initial standard deviation
+sd(log(visados.ts))
+# tsdisplay(log(visados.ts)) #this plot should already be in the report.
+
+# One order of differencing.
+sd(diff(log(visados.ts)))
+adf.test(diff(log(visados.ts)))
+tsdisplay(diff(log(visados.ts)))
+```
+
+We achieve stationarity because we have evidence to reject the null hypothesis in favor of the alternative hypothesis of stationarity in the Augmented Dicket-Fuller test ($p$-value << 0.01). Let us check if we need another order of differencing:
+
+```{r two_difference, warning=FALSE}
+# Two orders of differencing.
+sd(diff(diff(log(visados.ts))))
+```
+
+The answer is no, since the standard deviation increases. However, notice the high peaks of autocorrelations in the lags 12, 24 and 36 in the latter plot. This is a clear evidence of monthly seasonality. Therefore, we omit this first step and we apply directly a first seasonal difference in order to see if the time series is described by a seasonal random walk.
+```{r first_seasonal_difference,  fig.align='center'}
+# One order of seasonal differencing.
+sd(diff(log(visados.ts), 12))
+# Checking stationarity
+adf.test(diff(log(visados.ts), 12))
+tsdisplay(diff(log(visados.ts), 12))
+```
+
+A seasonal random walk is defined as $\hat{Y}_t = Y_{t-12} + \mu$, where $\mu$ is the average annnual trend. In this case, there is not evidence to reject the null hypothesis in the <i>adf.test()</i> and besides the ACF plot still has many positive autocorrelations. As we have already seen, this is an evidence to apply one order of non-seasonal difference.
+
+```{r seasonal_and_non_seasonal, warning=FALSE, fig.align='center'}
+# One order of non seasonal differencing and one order of seasonal differencing.
+sd(diff(diff(log(visados.ts), 12)))
+adf.test(diff(diff(log(visados.ts), 12)))
+tsdisplay(diff(diff(log(visados.ts), 12)))
+```
+
+We obtain stationarity again, a lower standard deviation than the simple model with just one order of non-season differencing (0.211 < 0.27) and now the peaks in the lags 12 and 24 are considerably smaller. The times series is now modeled as a seasonal random trend. Comparing this model with the previous seasonal random walk, they both predict that next year's seasonal cycle will have the same pattern. In contrast, the seasonal random trend considers that the future trend will be equal to the <u>most recent</u> year-to-year trend, instead of the <u>average</u> year-to-year trend ($\mu$ in the model). The seasonal random trend is defined as $\hat{Y}_t = Y_{t-12} + Y_{t-1} - Y_{t-13}$, which is equivalent to an $ARIMA(0,1,0)(0,1,0)_{12}$ model.
+
+To conclude, we stop here since another order of differencing does not improve the standard deviation. 
+
+```{r standard_deviation_stop}
+sd(diff(diff(diff(log(visados.ts), 12))))
+```
+#### ndiffs and nsdiff (forecast package)
+Let us study what values of differencing the functions <i>ndiffs</i> and <i>nsdiffs</i> suggest. These results should be taken into account with a grain of salt and just use them to support our analysis.
+```{r}
+ndiffs(log(visados.ts), test="kpss")
+ndiffs(log(visados.ts), test="adf")
+nsdiffs(log(visados.ts), m=12)
+```
+
+Surprisingly, depending on the test we use to estimate the number of differences required to make the time series stationary, we obtain a different value. This extra differencing order is a particular case where the KPPS test detects that the first order difference of the time series is still not stationary but trend-stationary, and another order of differencing is needed. In contrast, the ADF test rejects the null hypothesis of present of a unit root against a stationary root alternative. On the other hand, <i>nsdiffs</i> indicates that we do not need any order of seasonal differencing.
+
+### AR and MA terms
+
+Once your time series time series has been stationarized by differencing, the next step in fitting an ARIMA model is to correctly set whether AR or MA terms are needed to correct any autocorrelation that still remains in the differenced series. This task might be achieved by looking at the ACF and PACF plots of the differenced series. 
+
+An MA term is needed when a negative autocorrelation at lag 1 appears, that is, it tends to arise in series which are slightly overdifferenced.  The reason for this is that an MA term can "partially cancel" an order of differencing in the forecasting equation. Let us add a non-seasonal MA term:
+
+```{r ma_term}
+model_ma = Arima(log(visados.ts), order=c(0,1,1), seasonal=list(order=c(0,1,0), period=12))
+tsdisplay(model_ma$residuals)
+```
+
+We now identify a high peak at lag 12 in the ACF plot. If the autocorrelation at the seasonal period is positive, consider adding a seasonal AR term to the model. On the other hand, if the autocorrelation at the seasonal period is negative, consider adding a seasonal MA term to the model. Let us add a seasonal MA term:
+
+```{r sma_term}
+model_sma = Arima(log(visados.ts), order=c(0,1,1), seasonal=list(order=c(0,1,1), period=12))
+tsdisplay(model_sma$residuals)
+```
+
+The remanining residuals look nice though the presence of the some autocorrelation. These peaks does not mean that the model is wrong because even in simulated time series model they might appear. The obtained $ARIMA(0,1,1)(0,1,1)_{12}$ model is essentially a "seasonal exponential smoothing model", which equation is:
+
+$$ \hat{Y} = Y_{t-12} + Y_{t-1} - Y_{t-13} - \theta_1 e_{t-1} - \Theta_1 e_{t-12} + \Theta_1 \Omega_1 e_{t-13}$$
+
+where $\theta_1$ is the MA(1) coefficient and $\Theta_1$ is the SMA(1) coefficient.
+
+### Improving ARIMA models
+
+TODO: Comment models and analyze the hypothesis. Independence of residuals should be mandatory. The zero mean as well, but it can be fixed:
+
+"The residuals have zero mean. If the residuals have a mean other than zero, then the forecasts are biased.
+Adjusting for bias is easy: if the residuals have mean, then simply add the mean to all forecasts and the bias problem is solved."" 
+
+We have 4 models:
+- Theoretical model
+- Improved theoretical model based on RMSE
+    We maintain the parameters and we tune the parameters increasing their values (we don't decrease them)
+- Find the best model in terms of first hypothesis (model that fulfills the hypothesis) and second RMSE.
+- auto.arima(). Just say that this model is shit and we found one better.
+
+Note: the first time you mention the Box.test, you should mention this:
+
+"We suggest using lag=10 for non-seasonal data and lag=2m for seasonal data, where m is the period of seasonality."
+"fitdf = p+q+P+Q""
+
+```{r models}
+# Own model
+model0 = Arima(log(visados.ts), order=c(0,1,1), seasonal=list(order=c(0,1,1), period=12))
+
+t.test(model0$residuals)
+Box.test(model0$residuals, lag=24, fitdf=2)
+
+jarque.bera.test(model0$residuals)
+which.max(model0$residuals)
+jarque.bera.test(model0$residuals[-117])
+
+# "Best RMSE model" maintaining some fixed parameters.
+#arima_model = getBestArima(0,1,1,0,1,1, s=12, hypothesis=FALSE)
+#model1 = arima_model$arima
+model1 = Arima(log(visados.ts), order=c(2,1,1), seasonal=list(order=c(1,1,1), period=12))
+  
+t.test(model1$residuals)
+Box.test(model1$residuals, lag=24, fitdf=5)
+
+jarque.bera.test(model1$residuals)
+which.max(model1$residuals)
+jarque.bera.test(model1$residuals[-117])
+
+# "Best RMSE model" in terms of hypothesis.
+#arima_model2 = getBestArima(0,0,0,0,0,0, s=12, hypothesis=TRUE)
+#model2 = arima_model2$arima
+model2 = Arima(log(visados.ts), order=c(1,2,2), seasonal=list(order=c(1,0,2), period=12))
+
+t.test(model2$residuals)
+Box.test(model2$residuals, lag=24, fitdf=6, type="L")
+
+jarque.bera.test(model2$residuals)
+which.max(model2$residuals)
+jarque.bera.test(model2$residuals[-117])
+
+# Auto Arima model.
+model3 = auto.arima(log(visados.ts))
+
+t.test(model3$residuals)
+Box.test(model3$residuals, lag=24, fitdf=3)
+
+jarque.bera.test(model3$residuals)
+which.max(model3$residuals)
+jarque.bera.test(model3$residuals[-117])
+```
+
+
+
+
+
+
+
+
+
