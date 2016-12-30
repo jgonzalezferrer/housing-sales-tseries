@@ -1,6 +1,6 @@
 ---
 title: "tseries"
-author: "Jose Luis Contreras Santos and Antonio Javier Gonz�lez Ferrer"
+author: "Jose Luis Contreras Santos and Antonio Javier Gonz?lez Ferrer"
 header-includes:
 - \usepackage{float}
 - \usepackage{hyperref}
@@ -14,7 +14,8 @@ keep_tex: true
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(fig.pos = 'H')
-setwd("D:/Google Drive/EIT/Intelligent Data Analysis/homeworks/homework_set3/report")
+#setwd("D:/Google Drive/EIT/Intelligent Data Analysis/homeworks/homework_set3/report")
+setwd("/home/jose/repos/housing-sales-tseries/report")
 ```
 ## Loading the data
 ```{r load, message=FALSE, warning=FALSE}
@@ -32,12 +33,14 @@ visados.ts <- ts(visados.df$Visados, start=c(1997,1), end=c(2013, 8), frequency 
 
 ## Part 1
 
-Jose
-<!---
-```{r pressure, echo=FALSE}
-plot(pressure)
+The following is an analysis of time series data reflecting the number of new housing approvals per month over a timespan ranging from January 1997 to August 2013, as measured by the Spanish institution Banco de España. Let us begin by plotting the series to have a quick overview of its characteristics. 
+
+```{r plot, fig.align='center', fig.width=6, fig.height=4, fig.cap="Plot of the time series"}
+plot(visados.ts)
 ```
--->
+
+At first glance, we can confirm that the data is not stationary. The series show an ascending trend during the first years, when there also seems to be a seasonal component. Around 2007, however, there is a radical drop in housing approvals and the trend changes to a slightly descending one. The reason for this is most likely to be the economic crisis which Spain suffered, whose effects began being noticeable around these dates.
+
 
 ## Part 2
 
@@ -95,7 +98,7 @@ plot(exp(seasadj(visados.stl)))
 
 ### Description
 
-blablabla ARIMA blablbla
+The next step will be to fit an ARIMA model to our time series. These kind of models are the most general class of time series models, and can be used for forecasting. Quoting Robert Nau, <i>'an ARIMA model can be viewed as a “filter” that tries to separate the signal from the noise, and the signal is then extrapolated into the future to obtain forecasts'</i>.
 
 ### Data transformation
 
@@ -117,9 +120,9 @@ BoxCox.lambda(visados.ts, lower=0, upper=2)
 
 ### Seasonality
 
-The nature of the dataset leads us to think about setting an anual seasonal component, $s=12$. However, analyzing the periodogram of the below figure, we cannot observe an evident seasonal component. The high peak at point 0 of the $x$-axis is related to a long, infinite repeated cycle over the time. The next highest peak should be at point 1 to observe a 12-monthly seasonality, but this is not the case. On the other hand, the <i>seasonplot()</i> and <i>monthplot()</i> functions might help us identifying this lack of seasonality. Firstly, the seasonal plot shows how the ups and downs are similar over the years, being the lines near to be parallel. Secondly, the month plot reveals a strong seasonal pattern in August, where the sales decay. This drop should be adjusted into the model if we would like to see whether there is a real trend if the house sales go down in August. 
+The nature of the dataset leads us to think about setting an anual seasonal component, $s=12$. However, analyzing the periodogram of the below figure, we cannot observe an evident seasonal component. The high peak at point 0 of the $x$-axis is related to a long, infinite repeated cycle over the time. The next highest peak should be at point 1 to observe a 12-monthly seasonality, but this is not the case. On the other hand, the <i>seasonplot()</i> and <i>monthplot()</i> functions might help us identifying this lack of seasonality. Firstly, the seasonal plot shows how the ups and downs are similar over the years, with the lines being almost parallel. Secondly, the month plot reveals a strong seasonal pattern in August, where the sales decay. This drop should be adjusted into the model if we would like to see whether if there is a real trend of house sales going down in August. 
 
-Should we consider a whole seasonal component just for this August change? Based on the last hypothesis, we should say no. However, as we will see in the following section, there exist a clear fact to assume seasionality.
+Should we consider a whole seasonal component just for this August change? Based on the last hypothesis, we should say no. However, as we will see in the following section, there exists a clear fact to assume seasionality.
 ```{r periodogram, fig.align='center', fig.width=6, fig.height=4, include=TRUE}
 tsdisplay(log(visados.ts), plot.type = "spectrum")
 ```
@@ -173,7 +176,7 @@ adf.test(diff(log(visados.ts), 12))
 tsdisplay(diff(log(visados.ts), 12))
 ```
 
-A seasonal random walk is defined as $\hat{Y}_t = Y_{t-12} + \mu$, where $\mu$ is the average annnual trend. In this case, there is not evidence to reject the null hypothesis in the <i>adf.test()</i> and besides the ACF plot still has many positive autocorrelations. As we have already seen, this is an evidence to apply one order of non-seasonal difference.
+A seasonal random walk is defined as $\hat{Y}_t = Y_{t-12} + \mu$, where $\mu$ is the average annnual trend. In this case, there is not evidence to reject the null hypothesis in the <i>adf.test()</i>. Besides, the ACF plot still has many positive autocorrelations. As we have already seen, this is an evidence to apply one order of non-seasonal difference.
 
 ```{r seasonal_and_non_seasonal, warning=FALSE, fig.align='center'}
 # One order of non seasonal differencing and one order of seasonal differencing.
@@ -182,7 +185,7 @@ adf.test(diff(diff(log(visados.ts), 12)))
 tsdisplay(diff(diff(log(visados.ts), 12)))
 ```
 
-We obtain stationarity again, a lower standard deviation than the simple model with just one order of non-season differencing (0.211 < 0.27) and now the peaks in the lags 12 and 24 are considerably smaller. The times series is now modeled as a seasonal random trend. Comparing this model with the previous seasonal random walk, they both predict that next year's seasonal cycle will have the same pattern. In contrast, the seasonal random trend considers that the future trend will be equal to the <u>most recent</u> year-to-year trend, instead of the <u>average</u> year-to-year trend ($\mu$ in the model). The seasonal random trend is defined as $\hat{Y}_t = Y_{t-12} + Y_{t-1} - Y_{t-13}$, which is equivalent to an $ARIMA(0,1,0)(0,1,0)_{12}$ model.
+We obtain stationarity again, with a lower standard deviation than the simple model with just one order of non-season differencing (0.211 < 0.27), and now the peaks in the lags 12 and 24 are considerably smaller. The times series is now modeled as a seasonal random trend. Comparing this model with the previous seasonal random walk, they both predict that next year's seasonal cycle will have the same pattern. In contrast, the seasonal random trend considers that the future trend will be equal to the <i>most recent</i> year-to-year trend, instead of the <i>average</i> year-to-year trend ($\mu$ in the model). The seasonal random trend is defined as $\hat{Y}_t = Y_{t-12} + Y_{t-1} - Y_{t-13}$, which is equivalent to an $ARIMA(0,1,0)(0,1,0)_{12}$ model.
 
 To conclude, we stop here since another order of differencing does not improve the standard deviation. 
 
@@ -190,14 +193,14 @@ To conclude, we stop here since another order of differencing does not improve t
 sd(diff(diff(diff(log(visados.ts), 12))))
 ```
 #### ndiffs and nsdiff (forecast package)
-Let us study what values of differencing the functions <i>ndiffs</i> and <i>nsdiffs</i> suggest. These results should be taken into account with a grain of salt and just use them to support our analysis.
+Let us study what values of differencing the functions <i>ndiffs</i> and <i>nsdiffs</i> suggest. These results should be taken with a grain of salt and only used to support our analysis.
 ```{r}
 ndiffs(log(visados.ts), test="kpss")
 ndiffs(log(visados.ts), test="adf")
 nsdiffs(log(visados.ts), m=12)
 ```
 
-Surprisingly, depending on the test we use to estimate the number of differences required to make the time series stationary, we obtain a different value. This extra differencing order is a particular case where the KPPS test detects that the first order difference of the time series is still not stationary but trend-stationary, and another order of differencing is needed. In contrast, the ADF test rejects the null hypothesis of present of a unit root against a stationary root alternative. On the other hand, <i>nsdiffs</i> indicates that we do not need any order of seasonal differencing.
+Surprisingly, depending on the test we use to estimate the number of differences required to make the time series stationary, we obtain a different value. This extra differencing order is a particular case where the KPSS test detects that the first order difference of the time series is still not stationary but trend-stationary, and another order of differencing is needed. In contrast, the ADF test rejects the null hypothesis of presence of a unit root against a stationary root alternative. On the other hand, <i>nsdiffs</i> indicates that we do not need any order of seasonal differencing.
 
 ### AR and MA terms
 
@@ -217,7 +220,7 @@ model_sma = Arima(log(visados.ts), order=c(0,1,1), seasonal=list(order=c(0,1,1),
 tsdisplay(model_sma$residuals)
 ```
 
-The remanining residuals look nice though the presence of the some autocorrelation. These peaks does not mean that the model is wrong because even in simulated time series model they might appear. The obtained $ARIMA(0,1,1)(0,1,1)_{12}$ model is essentially a "seasonal exponential smoothing model", which equation is:
+Despite the presence of the some autocorrelation, the remanining residuals look nice. These peaks do not mean that the model is wrong, as they might appear even in simulated time series models. The obtained $ARIMA(0,1,1)(0,1,1)_{12}$ model is essentially a "seasonal exponential smoothing model", which equation is:
 
 $$ \hat{Y} = Y_{t-12} + Y_{t-1} - Y_{t-13} - \theta_1 e_{t-1} - \Theta_1 e_{t-12} + \Theta_1 \Omega_1 e_{t-13}$$
 
