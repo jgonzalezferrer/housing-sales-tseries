@@ -226,7 +226,33 @@ $$ \hat{Y} = Y_{t-12} + Y_{t-1} - Y_{t-13} - \theta_1 e_{t-1} - \Theta_1 e_{t-12
 
 where $\theta_1$ is the MA(1) coefficient and $\Theta_1$ is the SMA(1) coefficient.
 
+### Assumptions
+
+Before continuing, lets analyze if the obtained model meets the assumptions. Independence of the residuals is particularly important, as them having a mean of zero is also relevant, but can be fixed if it is not met. If the residuals have a mean different from zero, then an option is to simply add the mean to all forecasts. This way the bias problem can be solved. 
+
+A brief comment on the parameters of the Box.test function. The recommendation is to use lag=10 for non-seasonal data and lag=2m for seasonal data, where m is the period of seasonality, therefore lag=24 was chosen here. As for the fitdf parameter, it refers to "the number of degrees of freedom to be subtracted if x is a series of residuals", in our case $fitdf = p+q+P+Q = 2$.
+
+```{r model1 assumptions}
+model0 = Arima(log(visados.ts), order=c(0,1,1), seasonal=list(order=c(0,1,1), period=12))
+
+t.test(model0$residuals)
+Box.test(model0$residuals, lag=24, fitdf=2)
+jarque.bera.test(model0$residuals)
+```
+
+Results show that the residuals do not have zero mean and are not independent (the p-value resulting from the Box-Pierce test conducted on them is low enough to reject the null hypothesis of independence, but is not extremely low, however). The Jarque-Bera test indicates that these residuals are also not normal. Outsiders can noticeably alter the results of this test, so lets try again, removing the greatest outsider this time.
+
+```{r models}
+which.max(model0$residuals)
+jarque.bera.test(model0$residuals[-117])
+```
+
+As the new p-value shows, there is no evidence to reject the null hypothesis now. Therefore, residuals can indeed be considered normal if this outsider is not taken into account.
+
+
 ### Improving ARIMA models
+
+The ARIMA model we have until now has some upsides, in the sense that a) it is simple parameter-wise, b) was obtained following the theory and c) residuals meet most of the assumptions. Independence of these, however, has not been achieved. Because of this fact, and because ARIMA models are hard to fit, and there is no way to be sure that the most appropriate one has been found, a couple alternative methods for choosing parameters have been tried next. 
 
 TODO: Comment models and analyze the hypothesis. Independence of residuals should be mandatory. The zero mean as well, but it can be fixed:
 
@@ -240,22 +266,9 @@ We have 4 models:
 - Find the best model in terms of first hypothesis (model that fulfills the hypothesis) and second RMSE.
 - auto.arima(). Just say that this model is shit and we found one better.
 
-Note: the first time you mention the Box.test, you should mention this:
 
-"We suggest using lag=10 for non-seasonal data and lag=2m for seasonal data, where m is the period of seasonality."
-"fitdf = p+q+P+Q""
 
 ```{r models}
-# Own model
-model0 = Arima(log(visados.ts), order=c(0,1,1), seasonal=list(order=c(0,1,1), period=12))
-
-t.test(model0$residuals)
-Box.test(model0$residuals, lag=24, fitdf=2)
-
-jarque.bera.test(model0$residuals)
-which.max(model0$residuals)
-jarque.bera.test(model0$residuals[-117])
-
 # "Best RMSE model" maintaining some fixed parameters.
 #arima_model = getBestArima(0,1,1,0,1,1, s=12, hypothesis=FALSE)
 #model1 = arima_model$arima
