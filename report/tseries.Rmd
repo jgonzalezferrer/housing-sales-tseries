@@ -242,13 +242,16 @@ jarque.bera.test(model0$residuals)
 
 Results show that the residuals do not have zero mean and are not independent (the p-value resulting from the Box-Pierce test conducted on them is low enough to reject the null hypothesis of independence, but is not extremely low, however). The Jarque-Bera test indicates that these residuals are also not normal. Outsiders can noticeably alter the results of this test, so lets try again, removing the greatest outsider this time.
 
-```{r models}
+```{r model1_assumptions_b}
 which.max(model0$residuals)
 jarque.bera.test(model0$residuals[-117])
 ```
 
-As the new p-value shows, there is no evidence to reject the null hypothesis now. Therefore, residuals can indeed be considered normal if this outsider is not taken into account.
+As the new p-value shows, there is no evidence to reject the null hypothesis now. Therefore, residuals can indeed be considered normal if this outsider is not taken into account. Moreover, as the plot below shows, ACF and PACF functions of the residuals behave decently, only showing one relevant spike each (ideally, all spikes would be within the limits, but given that we are dealing with real world data, this results can be considered valid). 
 
+```{r model1_residualsplot,  fig.align='center'}
+acf2(model0$residuals)
+```
 
 ### Improving ARIMA models
 
@@ -298,7 +301,13 @@ which.max(model2$residuals)
 jarque.bera.test(model2$residuals[-117])
 ```
 
-All the assumptions are now met, with the residuals also being normal and independent. AIC and RMSE are also the lowest of all models. Surprisingly, this model contradicts the theoretical one in the sense that it does not include any seasonal differences, but in exchange it does feature seasonal AR 1 and MA 2.
+All the assumptions are now met, with the residuals also being normal and independent. AIC and RMSE are also the lowest of all models. Surprisingly, this model contradicts the theoretical one in the sense that it does not include any seasonal differences, but in exchange it does feature seasonal AR 1 and MA 2. Finally, even the ACF and PACF functions display perfect behaviour, with no outstanding spikes, as the plot illustrates.
+
+```{r alt_models_2b_acf, fig.align='center'}
+acf2(model2$residuals)
+```
+
+
 
 #### Alternative 3: auto.arima()
 
@@ -320,9 +329,15 @@ jarque.bera.test(model3$residuals[-117])
 
 As seen above, the resulting model does have independent residuals, and their mean is very close to zero. However they are not normal, not even after removing the outsider. In addition, RMSE has increased from previous iterations, and AIC has increased drastically. All in all, there are better alternatives than this automatically fitted ARIMA.
 
+### Forecasting
 
+Out of the four models proposed above, the one from Alternative 2 has the best AIC and RMSE, with the additional advantage of meeting all the assumptions. For these reasons, it has been the one chosen for this next step: forecasting future values of the time series. The plot below shows in blue the predicted values for the next samples of the time series. 
 
+```{r forecasts, fig.align='center'}
+plot(forecast(model2))
+```
 
+As expected, and following the trend present in the last years of our data, the model predicts a further, gradual decrease in housing sales over the next years. The gray arearepresents the confidence margins which, logically, are wider as predictions become more distant in time.
 
 
 
