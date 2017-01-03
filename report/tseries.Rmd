@@ -289,7 +289,7 @@ t.test(model2$residuals)
 
 While, according to the test, the mean is not equal to zero, further checking the results shows that it is close enough for us to consider it zero, $9.8*10^-4$.
 
-```{r alt_models_2}
+```{r alt_models_2b}
 Box.test(model2$residuals, lag=24, fitdf=6, type="L")
 jarque.bera.test(model2$residuals)
 
