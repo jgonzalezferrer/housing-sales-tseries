@@ -1,3 +1,18 @@
+#' Get best ARIMA model given some defined parameters.
+#'
+#' Obtain the best ARIMA model in terms of a) RMSE and b) (optional) statistical assumptions.
+#' Some fixed parameters can be fixed, at they will be iterated adding up one value in each iteration.
+#' We consider that the model might have one outlier.
+#' 
+#' @param p order of the autoregressive model
+#' @param d degree of differencings
+#' @param q order of the moving average model
+#' @param P order of the seasonal autoregressive model
+#' @param D defree of seasonal differencings
+#' @param Q order of the seasonal moving average model
+#' @param s seasonality component
+#' @param hypothesis if all the hypothesis of the model should be met or not
+#' @return best arima model and rmse value.
 getBestArima <- function(p, d, q, P, D, Q, s=0, hypothesis=FALSE){
   min <- Inf
   arima_model <- ''
