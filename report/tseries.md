@@ -41,7 +41,9 @@ Decomposition of the time series
 
 Decomposition methods describe the trend and seasonal factors in a time series. We will use this information for understanding the data at hand before building a more sophisticated model, for instance, an ARIMA model.
 
-The Multiplicative decomposition is one of the basic decomposition methods and it is useful when the seasonal variance of the data increases over time. As we will see in the further analysis, such hypothesis will be closer to the structure of the dataset than the simple Additive decomposition. The Multiplicative decomposition method is defined as follows: ![](https://latex.codecogs.com/gif.latex?%24x_t%20%3D%20T_t%20*%20S_t%20*%20I_t%24)
+The Multiplicative decomposition is one of the basic decomposition methods and it is useful when the seasonal variance of the data increases over time. As we will see in the further analysis, such hypothesis will be closer to the structure of the dataset than the simple Additive decomposition. The Multiplicative decomposition method is defined as:
+
+<img src="https://latex.codecogs.com/gif.latex?%24x_t%20%3D%20T_t%20*%20S_t%20*%20I_t%24" style="display: block; margin: auto;" />
 
 where *x*<sub>*t*</sub> is the time series at time *t*, *T*<sub>*t*</sub> is the trend, *S*<sub>*t*</sub> is the seasonality and *I*<sub>*t*</sub> is the irregular part or remainder. Essentially, the goal is to find a decomposition such that the remainder behaves like white noise, that is to say, the remainder acts as a stationary time series by itself.
 
@@ -83,6 +85,7 @@ Box.test(visados.stl.remainder, lag=12)
 Let us forecast future values based on the last analysis of the trend and seasonal factors. The seasonality factor can be identified, but the trend is not clear.
 
 ``` r
+# Forecasting new values.
 plot(forecast(visados.stl, method="naive"))
 ```
 
@@ -118,20 +121,14 @@ The nature of the dataset leads us to think about setting an anual seasonal comp
 Should we consider a whole seasonal component just for this August change? Based on the last hypothesis, we should say no. However, as we will see in the following section, there exists a clear fact to assume seasionality.
 
 ``` r
+# Periodogram of the time series.
 tsdisplay(log(visados.ts), plot.type = "spectrum")
 ```
 
 <img src="tseries_files/figure-markdown_github/periodogram-1.png" style="display: block; margin: auto;" />
 
-<!--
-\begin{figure}[H]
-\centering
-\includegraphics[width=4in]{figures/periodogram.png} 
-\caption{Periodogram of log(visados.ts)}
-\label{fig:periodogram}
-\end{figure}
--->
 ``` r
+# Season and month plots.
 par(mfrow=c(1,2))
 seasonplot(log(visados.ts))
 monthplot(log(visados.ts))
@@ -160,6 +157,7 @@ sd(diff(log(visados.ts)))
     ## [1] 0.2719039
 
 ``` r
+# Augmented Dickey–Fuller Test for stationarity.
 adf.test(diff(log(visados.ts)))
 ```
 
@@ -171,10 +169,11 @@ adf.test(diff(log(visados.ts)))
     ## alternative hypothesis: stationary
 
 ``` r
+# ACF and PACF of the differentiated time series.
 tsdisplay(diff(log(visados.ts)))
 ```
 
-![](tseries_files/figure-markdown_github/first_difference-1.png)
+<img src="tseries_files/figure-markdown_github/first_difference-1.png" style="display: block; margin: auto;" />
 
 We achieve stationarity because we have evidence to reject the null hypothesis in favor of the alternative hypothesis of stationarity in the Augmented Dicket-Fuller test (*p*-value &lt;&lt; 0.01). Let us check if we need another order of differencing:
 
@@ -207,12 +206,13 @@ adf.test(diff(log(visados.ts), 12))
     ## alternative hypothesis: stationary
 
 ``` r
+# ACF and PACF of the seasonal differentiated time series.
 tsdisplay(diff(log(visados.ts), 12))
 ```
 
 <img src="tseries_files/figure-markdown_github/first_seasonal_difference-1.png" style="display: block; margin: auto;" />
 
-A seasonal random walk is defined as $\\hat{Y}\_t = Y\_{t-12} + \\mu$, where *μ* is the average annnual trend. In this case, there is not evidence to reject the null hypothesis in the <i>adf.test()</i>. Besides, the ACF plot still has many positive autocorrelations. As we have already seen, this is an evidence to apply one order of non-seasonal difference.
+A seasonal random walk is defined as <img src="https://latex.codecogs.com/gif.latex?%24%5Chat%7BY%7D_t%20%3D%20Y_%7Bt-12%7D%20&plus;%20%5Cmu%24"/> , where <img src="https://latex.codecogs.com/gif.latex?%5Cmu"/> is the average annnual trend. In this case, there is not evidence to reject the null hypothesis in the <i>adf.test()</i>. Besides, the ACF plot still has many positive autocorrelations. As we have already seen, this is an evidence to apply one order of non-seasonal difference.
 
 ``` r
 # One order of non seasonal differencing and one order of seasonal differencing.
@@ -238,11 +238,12 @@ tsdisplay(diff(diff(log(visados.ts), 12)))
 
 <img src="tseries_files/figure-markdown_github/seasonal_and_non_seasonal-1.png" style="display: block; margin: auto;" />
 
-We obtain stationarity again, with a lower standard deviation than the simple model with just one order of non-season differencing (0.211 &lt; 0.27), and now the peaks in the lags 12 and 24 are considerably smaller. The times series is now modeled as a seasonal random trend. Comparing this model with the previous seasonal random walk, they both predict that next year's seasonal cycle will have the same pattern. In contrast, the seasonal random trend considers that the future trend will be equal to the <i>most recent</i> year-to-year trend, instead of the <i>average</i> year-to-year trend (*μ* in the model). The seasonal random trend is defined as $\\hat{Y}\_t = Y\_{t-12} + Y\_{t-1} - Y\_{t-13}$, which is equivalent to an *A**R**I**M**A*(0, 1, 0)(0, 1, 0)<sub>12</sub> model.
+We obtain stationarity again, with a lower standard deviation than the simple model with just one order of non-season differencing (0.211 &lt; 0.27), and now the peaks in the lags 12 and 24 are considerably smaller. The times series is now modeled as a seasonal random trend. Comparing this model with the previous seasonal random walk, they both predict that next year's seasonal cycle will have the same pattern. In contrast, the seasonal random trend considers that the future trend will be equal to the <i>most recent</i> year-to-year trend, instead of the <i>average</i> year-to-year trend (<img src="https://latex.codecogs.com/gif.latex?%5Cmu"/> in the model). The seasonal random trend is defined as <img src="https://latex.codecogs.com/gif.latex?%24%5Chat%7BY%7D_t%20%3D%20Y_%7Bt-12%7D%20&plus;%20Y_%7Bt-1%7D%20-%20Y_%7Bt-13%7D%24"/>, which is equivalent to an <img src="https://latex.codecogs.com/gif.latex?%24ARIMA%280%2C1%2C0%29%280%2C1%2C0%29_%7B12%7D%24"/> model.
 
 To conclude, we stop here since another order of differencing does not improve the standard deviation.
 
 ``` r
+# Standard deviation.
 sd(diff(diff(diff(log(visados.ts), 12))))
 ```
 
@@ -253,18 +254,22 @@ sd(diff(diff(diff(log(visados.ts), 12))))
 Let us study what values of differencing the functions <i>ndiffs</i> and <i>nsdiffs</i> suggest. These results should be taken with a grain of salt and only be used to support our analysis.
 
 ``` r
+# Built-in functions to calculate the number of differences required for a stationary series.
+# KPSS test.
 ndiffs(log(visados.ts), test="kpss")
 ```
 
     ## [1] 2
 
 ``` r
+# ADF test.
 ndiffs(log(visados.ts), test="adf")
 ```
 
     ## [1] 1
 
 ``` r
+# Seasional differences.
 nsdiffs(log(visados.ts), m=12)
 ```
 
@@ -279,35 +284,39 @@ Once your time series time series has been stationarized by differencing, the ne
 An MA term is needed when a negative autocorrelation at lag 1 appears, that is, it tends to arise in series which are slightly overdifferenced. The reason for this is that an MA term can "partially cancel" an order of differencing in the forecasting equation. Let us add a non-seasonal MA term:
 
 ``` r
+# ARIMA(0,1,1)(0,1,0)
 model_ma = Arima(log(visados.ts), order=c(0,1,1), seasonal=list(order=c(0,1,0), period=12))
 tsdisplay(model_ma$residuals)
 ```
 
-![](tseries_files/figure-markdown_github/ma_term-1.png)
+<img src="tseries_files/figure-markdown_github/ma_term-1.png" style="display: block; margin: auto;" />
 
 We now identify a high peak at lag 12 in the ACF plot. If the autocorrelation at the seasonal period is positive, consider adding a seasonal AR term to the model. On the other hand, if the autocorrelation at the seasonal period is negative, consider adding a seasonal MA term to the model. Let us add a seasonal MA term:
 
 ``` r
+# ARIMA(0,1,1)(0,1,1)
 model_sma = Arima(log(visados.ts), order=c(0,1,1), seasonal=list(order=c(0,1,1), period=12))
 tsdisplay(model_sma$residuals)
 ```
 
-![](tseries_files/figure-markdown_github/sma_term-1.png)
+<img src="tseries_files/figure-markdown_github/sma_term-1.png" style="display: block; margin: auto;" />
 
-Despite the presence of some autocorrelation, the remanining residuals look nice. These peaks do not mean that the model is wrong, as they might appear even in simulated time series models. The obtained *A**R**I**M**A*(0, 1, 1)(0, 1, 1)<sub>12</sub> model is essentially a "seasonal exponential smoothing model", which equation is:
+Despite the presence of some autocorrelation, the remanining residuals look nice. These peaks do not mean that the model is wrong, as they might appear even in simulated time series models. The obtained <img src="https://latex.codecogs.com/gif.latex?%24ARIMA%280%2C1%2C1%29%280%2C1%2C1%29_%7B12%7D%24"/> model is essentially a "seasonal exponential smoothing model", which equation is:
 
-$$ \\hat{Y} = Y\_{t-12} + Y\_{t-1} - Y\_{t-13} - \\theta\_1 e\_{t-1} - \\Theta\_1 e\_{t-12} + \\Theta\_1 \\Omega\_1 e\_{t-13}$$
+<img src="https://latex.codecogs.com/gif.latex?%24%24%20%5Chat%7BY%7D%20%3D%20Y_%7Bt-12%7D%20&plus;%20Y_%7Bt-1%7D%20-%20Y_%7Bt-13%7D%20-%20%5Ctheta_1%20e_%7Bt-1%7D%20-%20%5CTheta_1%20e_%7Bt-12%7D%20&plus;%20%5CTheta_1%20%5COmega_1%20e_%7Bt-13%7D%24%24" style="display: block; margin: auto;" />
 
 where *θ*<sub>1</sub> is the MA(1) coefficient and *Θ*<sub>1</sub> is the SMA(1) coefficient.
 
-### Assumptions
+### Statistical Assumptions
 
-Before continuing, lets analyze if the obtained model meets the assumptions. Independence of the residuals is particularly important, as them having a mean of zero is also relevant, but can be fixed if it is not met. If the residuals have a mean different from zero, then an option is to simply add the mean to all forecasts. This way the bias problem can be solved.
+Before continuing, lets analyze if the obtained model meets the assumptions in order to study its validation. Independence of the residuals is particularly important in order to ensure the correctness in the predictions. Having a mean of zero is also relevant, but can be fixed if it is not met. If the residuals have a mean different from zero, then an option is to simply add the mean to all forecasts. This way the bias problem can be solved. Finally, the normality will not only guarantee the independence of the residuals but also will valid the confidence intervals, since the hypothesis to calculate these intervals are based on the normal distribution.
 
-A brief comment on the parameters of the <i>Box.test</i> function. The recommendation is to use *l**a**g* = 10 for non-seasonal data and *l**a**g* = 2*m* for seasonal data, where *m* is the period of seasonality, therefore *l**a**g* = 24 was chosen here. As for the *f**i**t**d**f* parameter, it refers to "the number of degrees of freedom to be subtracted if *x* is a series of residuals", in our case *f**i**t**d**f* = *p* + *q* + *P* + *Q* = 2.
+A brief comment on the parameters of the <i>Box.test</i> function. R. Hyndman and G. Athanasopoulos recommend to use *l**a**g* = 10 for non-seasonal data and *l**a**g* = 2*m* for seasonal data, where *m* is the period of seasonality, therefore *l**a**g* = 24 was chosen here. As for the *f**i**t**d**f* parameter, it refers to "the number of degrees of freedom to be subtracted if *x* is a series of residuals", in our case *f**i**t**d**f* = *p* + *q* + *P* + *Q* = 2.
 
 ``` r
+# ARIMA(0,1,1)(0,1,1)
 model0 = Arima(log(visados.ts), order=c(0,1,1), seasonal=list(order=c(0,1,1), period=12))
+# One-sample t-test
 t.test(model0$residuals)
 ```
 
@@ -324,6 +333,7 @@ t.test(model0$residuals)
     ## -0.02227421
 
 ``` r
+# Box-Pierce test
 Box.test(model0$residuals, lag=24, fitdf=2)
 ```
 
@@ -334,6 +344,7 @@ Box.test(model0$residuals, lag=24, fitdf=2)
     ## X-squared = 39.066, df = 22, p-value = 0.01387
 
 ``` r
+# Jarque bera test for normality
 jarque.bera.test(model0$residuals)
 ```
 
@@ -346,6 +357,7 @@ jarque.bera.test(model0$residuals)
 Results show that the residuals do not have zero mean and are not independent (the *p*-value resulting from the Box-Pierce test conducted on them is low enough to reject the null hypothesis of independence, but is not extremely low, however). The Jarque-Bera test indicates that these residuals are also not normal. Outliers can noticeably alter the results of this test, so lets try again, removing the greatest outlier this time.
 
 ``` r
+# Checking normality without greatest outlier.
 which.max(model0$residuals)
 ```
 
@@ -371,14 +383,15 @@ res = acf2(model0$residuals)
 
 ### Improving ARIMA models
 
-The ARIMA model we have until now has some upsides, in the sense that a) it is simple parameter-wise, b) was obtained following the theory and c) residuals meet most of the assumptions. Independence of these, however, has not been achieved. Because of this fact and because ARIMA models are hard to fit, a couple alternative methods for parameter tuning have been tried next.
+The ARIMA model we have until now has some upsides, in the sense that a) it is simple parameter-wise, b) was obtained following the theory and c) residuals meet most of the assumptions. Independence of these, however, has not been achieved. Because of this fact and because ARIMA models are hard to fit, a couple alternative methods for parameter tuning have been tried next. We have implemented a user-defined method to iterate over different ARIMA models, where we can specify some default minimum parameters or if the statistical assumptions should be met or not. For further indications, refer to the `getBestArima.R` script in the `src` folder.
 
 #### Alternative 1: Improving based on RMSE
 
-A reasonable approach is to try and find a model which offers a lower RMSE than the one we have until now (roughly, for our first model, *R**M**S**E* = 0.152). Along this line, maintaining at least the already calculated parameters, we tuned them increasing their values one by one. The result was the following model, an *A**R**I**M**A*(2, 1, 1)(1, 1, 1)<sub>12</sub>.
+A reasonable approach is to try and find a model which offers a lower RMSE than the one we have until now (roughly, for our first model, RMSE = 0.152). Along this line, maintaining at least the already calculated parameters, we tuned them increasing their values one by one. The result was the following model, an <img src="https://latex.codecogs.com/gif.latex?ARIMA%282%2C1%2C1%29%281%2C1%2C1%29_%7B12%7D"/>.
 
 ``` r
 # "Best RMSE model" maintaining some fixed parameters.
+# ARIMA(2,1,1)(1,1,1)
 model1 = Arima(log(visados.ts), order=c(2,1,1), seasonal=list(order=c(1,1,1), period=12))
 summary(model1)
 ```
@@ -437,14 +450,15 @@ jarque.bera.test(model1$residuals[-which.max(model1$residuals)])
     ## data:  model1$residuals[-which.max(model1$residuals)]
     ## X-squared = 4.8968, df = 2, p-value = 0.08643
 
-Assumptions-wise this model performs better than the previous one. While residuals still do not have a mean of zero, results of the Box-Pierce and Jarque-Bera tests (the latter after ruling out the outlier at position 117) show that they are independent and normal. Moreover, root mean squared error has been reduced, achieving a slightly lower *R**M**S**E* = 0.146, and AIC is also somewhat lower. The downside of this model is complexity, as it uses more complex parameters than the previous one, and the gain in terms of assumptions or RMSE is arguably not significant enough to make up for that fact.
+Assumptions-wise this model performs better than the previous one. While residuals still do not have a mean of zero, results of the Box-Pierce and Jarque-Bera tests (the latter after ruling out the outlier at position 117) show that they are independent and normal. Moreover, root mean squared error has been reduced, achieving a slightly lower RMSE = 0.146, and AIC is also somewhat lower. The downside of this model is complexity, as it uses more complex parameters than the previous one, and the gain in terms of assumptions or RMSE is arguably not significant enough to make up for that fact.
 
 #### Alternative 2: Improving based on hypothesis-meeting
 
-This time, priority has been given to finding a model which fullfills all the hypothesis, that is, one which guarantees that residuals are independent, normal, and have zero mean. Within this subset of models, we have chosen the one with lowest RMSE: an *A**R**I**M**A*(1, 2, 2)(1, 0, 2)<sub>12</sub>.
+This time, priority has been given to finding a model which fullfills all the hypothesis, that is, one which guarantees that residuals are independent, normal, and have zero mean. Within this subset of models, we have chosen the one with lowest RMSE: an <img src="https://latex.codecogs.com/gif.latex?%24ARIMA%281%2C2%2C2%29%281%2C0%2C2%29_%7B12%7D%24"/>.
 
 ``` r
 # "Best RMSE model" in terms of hypothesis.
+# ARIMA(1,2,2)(1,0,2)
 model2 = Arima(log(visados.ts), order=c(1,2,2), seasonal=list(order=c(1,0,2), period=12))
 summary(model2)
 ```
@@ -515,7 +529,7 @@ res = acf2(model2$residuals)
 
 #### Alternative 3: auto.arima()
 
-Package forecast comes with a function to automatically find the best ARIMA model. This function, however, is not very trustable, and its results have to be tested. The result is an *A**R**I**M**A*(0, 2, 2)(0, 0, 2)<sub>12</sub>.
+Package forecast comes with a function to automatically find the best ARIMA model. This function, however, is not very trustable, and its results have to be tested. The result is an <img src="https://latex.codecogs.com/gif.latex?%24ARIMA%280%2C2%2C2%29%280%2C0%2C2%29_%7B12%7D%24"/>.
 
 ``` r
 # Auto Arima model.
@@ -579,11 +593,67 @@ jarque.bera.test(model3$residuals[-which.max(model3$residuals)])
 
 As seen above, the resulting model does have independent residuals, and their mean is very close to zero. However they are not normal, not even after removing the outlier. In addition, RMSE has increased from previous iterations, and AIC has increased drastically. All in all, there are better alternatives than this automatically fitted ARIMA.
 
+Finally, we have summarized in the following table the principal ARIMA models that we have analyzed along the report, highlighting the accuracy and the met of the assumptions of the residuals:
+
+<style type="text/css">
+.tg  {border-collapse:collapse;border-spacing:0;}
+.tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
+.tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
+.tg .tg-uqo3{background-color:#efefef;text-align:center;vertical-align:top}
+.tg .tg-s6z2{text-align:center}
+.tg .tg-baqh{text-align:center;vertical-align:top}
+.tg .tg-hgcj{font-weight:bold;text-align:center}
+.tg .tg-amwm{font-weight:bold;text-align:center;vertical-align:top}
+.tg .tg-j4kc{background-color:#efefef;text-align:center}
+</style>
+<table class="tg">
+<tr>
+    <th class="tg-hgcj">Model</th>
+    <th class="tg-hgcj">RMSE</th>
+    <th class="tg-hgcj">Independence</th>
+    <th class="tg-hgcj">Zero mean</th>
+    <th class="tg-amwm">Normality</th>
+
+</tr>
+<tr>
+    <td class="tg-s6z2">(0,1,1)(0,1,1)</td>
+    <td class="tg-s6z2">0.152</td>
+    <td class="tg-s6z2">no</td>
+    <td class="tg-s6z2">no</td>
+    <td class="tg-baqh">yes (outlier)</td>
+
+</tr>
+<tr>
+    <td class="tg-s6z2">(2,1,1)(1,1,1)</td>
+    <td class="tg-s6z2">0.146</td>
+    <td class="tg-s6z2">yes</td>
+    <td class="tg-s6z2">no</td>
+    <td class="tg-baqh">yes (outlier)</td>
+
+</tr>
+<tr>
+    <td class="tg-j4kc">(1,2,2)(1,0,2)</td>
+    <td class="tg-j4kc">0.1430</td>
+    <td class="tg-j4kc">yes</td>
+    <td class="tg-j4kc">yes</td>
+    <td class="tg-uqo3">yes (outlier)</td>
+
+</tr>
+<tr>
+    <td class="tg-baqh">(0,2,2)(0,0,2)</td>
+    <td class="tg-baqh">0.178</td>
+    <td class="tg-baqh">yes</td>
+    <td class="tg-baqh">yes</td>
+    <td class="tg-baqh">no</td>
+
+</tr>
+</table>
 ### Forecasting
 
 Out of the four models proposed above, the one from Alternative 2 has the best AIC and RMSE, with the additional advantage of meeting all the assumptions. For these reasons, it has been the one chosen for this next step: forecasting future values of the time series. The plot below shows in blue the predicted values for the next samples of the time series.
 
 ``` r
+# Forecasting new values based on the ARIMA best model.
 plot(forecast(model2))
 ```
 
