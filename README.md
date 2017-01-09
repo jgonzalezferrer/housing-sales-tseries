@@ -15,7 +15,7 @@ install.packages("astsa")
 
 Time Series models
 ----------- 
-We have applied different versions of statistical learning models, checking the LINE assumptions for each of them:
+The time series has been analyzed following these two approaches:
 
 * [Decomposition methods](https://www.otexts.org/fpp/6/5): These methods describe the trend and seasonal factors in a time series. The function <i>stl()</i> decomposes the time series based on LOESS, a smoothing procedure that is based on local, weighted robust regression. 
 
