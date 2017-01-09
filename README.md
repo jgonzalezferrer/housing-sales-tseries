@@ -1,4 +1,4 @@
-# housing-sales-tseries: Modeling the new housing approvals in Spain from 1997 to 2013 as a Time Series in R.
+# housing-sales-tseries: Modeling the new housing approvals in Spain as a Time Series in R.
 
 
 The following is an analysis of time series data reflecting the number of new housing approvals per month over a timespan ranging from January 1997 to August 2013, as measured by the Spanish institution Banco de España (www.bde.es).
@@ -11,7 +11,6 @@ install.packages("forecast")
 install.packages("car")
 install.packages("tseries")
 install.packages("astsa")
-
 ````
 
 Time Series models
