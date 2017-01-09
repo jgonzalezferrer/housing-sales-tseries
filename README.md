@@ -19,4 +19,4 @@ The time series has been analyzed following these two approaches:
 
 * [Decomposition methods](https://www.otexts.org/fpp/6/5): These methods describe the trend and seasonal factors in a time series. The function <i>stl()</i> decomposes the time series based on LOESS, a smoothing procedure that is based on local, weighted robust regression. 
 
-* [ARIMA models](http://people.duke.edu/~rnau/arimrule.htm): The function <i>arima</i> will help us to identify and derive ARIMA models for modeling and forecasting time series. The ACF and PACF plots of the residuals will advice us how to distinguish the seasonality, degree of differencing, autoregressive models and moving average models.
+* [ARIMA models](http://people.duke.edu/~rnau/arimrule.htm): The function <i>arima()</i> will help us to identify and derive ARIMA models for modeling and forecasting time series. The ACF and PACF plots of the residuals will advice us how to distinguish the seasonality, degree of differencing, autoregressive models and moving average models.
