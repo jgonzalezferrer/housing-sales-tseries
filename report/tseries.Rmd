@@ -1,6 +1,6 @@
 ---
 title: "tseries"
-author: "Jose Luis Contreras Santos and Antonio Javier Gonz?lez Ferrer"
+author: "Jose Luis Contreras Santos and Antonio Javier González Ferrer"
 header-includes:
 - \usepackage{float}
 - \usepackage{hyperref}
@@ -14,8 +14,8 @@ keep_tex: true
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(fig.pos = 'H')
-#setwd("D:/Google Drive/EIT/Intelligent Data Analysis/homeworks/homework_set3/report")
-setwd("/home/jose/repos/housing-sales-tseries/report")
+#setwd("/home/javiergf/javiergf/Dropbox/EIT/ida-Intelligent_Data_Analysis/homeworks/homework_set3/report")
+#setwd("/home/jose/repos/housing-sales-tseries/report")
 ```
 ## Loading the data
 ```{r load, message=FALSE, warning=FALSE}
@@ -23,7 +23,6 @@ library(forecast)
 library(astsa)
 library(tseries)
 library(car)
-library(astsa)
 source("../src/getBestArima.R")
 
 visados.df <- read.csv("../data/data_g2.csv", header=T, sep=",", stringsAsFactors = FALSE)
@@ -31,7 +30,7 @@ visados.df <- read.csv("../data/data_g2.csv", header=T, sep=",", stringsAsFactor
 visados.ts <- ts(visados.df$Visados, start=c(1997,1), end=c(2013, 8), frequency = 12)
 ```
 
-## Part 1
+## Time series description
 
 The following is an analysis of time series data reflecting the number of new housing approvals per month over a timespan ranging from January 1997 to August 2013, as measured by the Spanish institution Banco de España. Let us begin by plotting the series to have a quick overview of its characteristics. 
 
@@ -39,14 +38,14 @@ The following is an analysis of time series data reflecting the number of new ho
 plot(visados.ts)
 ```
 
-At first glance, we can confirm that the data is not stationary. The series show an ascending trend during the first years, when there also seems to be a seasonal component. Around 2007, however, there is a radical drop in housing approvals and the trend changes to a slightly descending one. The reason for this is most likely to be the economic crisis which Spain suffered, whose effects began being noticeable around these dates.
+At first glance, we can confirm that the data is not stationary. The series show an ascending trend during the first years, when there also seems to be a possible annual seasonal component. Around 2007, however, there is a radical drop in housing approvals and the trend changes to a slightly descending one. The reason for this is most likely to be the economic crisis which Spain suffered, whose effects began being noticeable around these dates.
 
 
-## Part 2
+## Decomposition of the time series
 
 Decomposition methods describe the trend and seasonal factors in a time series. We will use this information for understanding the data at hand before building a more sophisticated model, for instance, an ARIMA model.
 
-The Multiplicative decomposition is one of the basic decomposition methods and it is useful when the seasonal variance of the data increases over time. As we will see in section X, such hypothesis will be closer to the structure of the dataset than the simple Additive decomposition. The Multiplicative decomposition method is defined as follows:
+The Multiplicative decomposition is one of the basic decomposition methods and it is useful when the seasonal variance of the data increases over time. As we will see in the further analysis, such hypothesis will be closer to the structure of the dataset than the simple Additive decomposition. The Multiplicative decomposition method is defined as follows:
 
 <center>$$x_t = T_t * S_t * I_t$$</center>
 
@@ -56,7 +55,7 @@ where $x_t$ is the time series at time $t$, $T_t$ is the trend, $S_t$ is the sea
 There are different ways to model the trend and the seasonality components. R provides the <i>stl()</i> function for seasonal decomposition of time series based on LOESS, a smoothing procedure that is based on local, weighted robust regression. The aim of this procedure is to reduce potentially the disturbing influence of outliers. By default, the command <i>stl()</i> performs an additive decomposition but it can be easily transformed to a multiplicative decomposition taking logarithm of the input data.
 
 
-```{r decomposition, fig.align='center', fig.width=6, fig.height=4, fig.cap="Pedro picapiedra"}
+```{r decomposition, fig.align='center', fig.width=6, fig.height=4}
 # Multiplicative decomposition
 visados.stl <- stl(log(visados.ts), s.window="periodic")
 plot(visados.stl)
@@ -65,7 +64,7 @@ plot(visados.stl)
 The second parameter essentially controls the seasonal effects to be estimated in as averages of de-trended values. The plot shows the observed series, the seasonal pattern, the smoothed trend line,  and the remainder part of the series. Note that the seasonal pattern is a regularly repeating pattern. The grey bars facilitate the interpretation by covering the same span of the $y$-scale in all the charts. 
 
 Nevertheless, the remainder does not look like white noise. Looking at the ACF plot, some significant autocorrelation coefficients can be distinguished outside the limits. Then, there is still information left in the remainder that should be used in computing forecasts. 
-```{r remainder, fig.align='center', fig.width=6, fig.height=4, fig.cap="Pedro picapiedra"}
+```{r remainder, fig.align='center', fig.width=6, fig.height=4}
 # Extracting and ploting the remainder part.
 visados.stl.remainder <- visados.stl$time.series[,c("remainder")]
 tsdisplay(visados.stl.remainder)
@@ -78,9 +77,9 @@ The further assumption is checked using the Box-Pierce test for examining the nu
 Box.test(visados.stl.remainder, lag=12) 
 ```
 
-Let us forecast future values based on the last analysis of the trend and seasonal factors. 
+Let us forecast future values based on the last analysis of the trend and seasonal factors. The seasonality factor can be identified, but the trend is not clear.
 
-```{r forecast, fig.align='center', fig.width=6, fig.height=4, fig.cap="Pedro picapiedra"}
+```{r forecast, fig.align='center', fig.width=6, fig.height=4}
 plot(forecast(visados.stl, method="naive"))
 ```
 
@@ -94,7 +93,7 @@ plot(exp(seasadj(visados.stl)))
 -->
 
 
-## Part 3
+## ARIMA Model
 
 ### Description
 
@@ -104,7 +103,7 @@ The next step will be to fit an ARIMA model to our time series. These kind of mo
 
 First of all, let us decide on whether to use the original variable or to work with the log transformation of it. The log transformation might improve the stationary of the time series. We will select the latter option if the amplitude of the seasional changes increases with the overall trend, that is, if the variance is not constant across the series. In the following figure you can observe that the shape of the log plot is smoother and its variance is more stable than the original variable. Therefore we will use the log of the house sales variable from now on. Notice that the Box Cox transformation suggests to use a lambda close to 0 too.
 
-```{r variance, fig.align='center', fig.width=6, fig.height=4, fig.cap="Pedro picapiedra", echo=FALSE}
+```{r variance, fig.align='center', fig.width=6, fig.height=4, echo=FALSE}
 par(mfrow=c(2,1))
 plot(visados.ts)
 plot(log(visados.ts))
@@ -146,13 +145,12 @@ monthplot(log(visados.ts))
 
 ### Differencing
 
-The next step in fitting an ARIMA model is to detect the order of differencing needed to make the time series stationary. We will employ the <i>adf.test</i> to check stationarity and the standard deviation values to set the stop condition (the lower, the better.)
+The next step in fitting an ARIMA model is to detect the order of differencing needed to make the time series stationary. We will employ the <i>adf.test</i> function to check stationarity, and the standard deviation values to set the stop condition (the lower, the better.)
 
-Let us suppose that we omit the seasonality analysis from the last section. Since the original ACF plot (Figure X) has positive autocorrelations out to a high number of lags, we will apply one order of diferencing.
+Let us suppose that we omit the seasonality analysis from the last section. Since the original ACF plot has positive autocorrelations out to a high number of lags, we will apply one order of diferencing.
 ```{r first_difference, warning=FALSE}
 # Initial standard deviation
 sd(log(visados.ts))
-# tsdisplay(log(visados.ts)) #this plot should already be in the report.
 
 # One order of differencing.
 sd(diff(log(visados.ts)))
@@ -167,7 +165,7 @@ We achieve stationarity because we have evidence to reject the null hypothesis i
 sd(diff(diff(log(visados.ts))))
 ```
 
-The answer is no, since the standard deviation increases. However, notice the high peaks of autocorrelations in the lags 12, 24 and 36 in the latter plot. This is a clear evidence of monthly seasonality. Therefore, we omit this first step and we apply directly a first seasonal difference in order to see if the time series is described by a seasonal random walk.
+The answer is no, since the standard deviation increases. However, notice the high peaks of autocorrelations in the lags 12, 24 and 36 in the latter plot. This is a clear evidence of 12-monthly seasonality. Therefore, we omit this first step and we apply directly a first seasonal difference in order to see if the time series is described by a seasonal random walk.
 ```{r first_seasonal_difference,  fig.align='center'}
 # One order of seasonal differencing.
 sd(diff(log(visados.ts), 12))
@@ -193,7 +191,7 @@ To conclude, we stop here since another order of differencing does not improve t
 sd(diff(diff(diff(log(visados.ts), 12))))
 ```
 #### ndiffs and nsdiff (forecast package)
-Let us study what values of differencing the functions <i>ndiffs</i> and <i>nsdiffs</i> suggest. These results should be taken with a grain of salt and only used to support our analysis.
+Let us study what values of differencing the functions <i>ndiffs</i> and <i>nsdiffs</i> suggest. These results should be taken with a grain of salt and only be used to support our analysis.
 ```{r}
 ndiffs(log(visados.ts), test="kpss")
 ndiffs(log(visados.ts), test="adf")
@@ -220,7 +218,7 @@ model_sma = Arima(log(visados.ts), order=c(0,1,1), seasonal=list(order=c(0,1,1),
 tsdisplay(model_sma$residuals)
 ```
 
-Despite the presence of the some autocorrelation, the remanining residuals look nice. These peaks do not mean that the model is wrong, as they might appear even in simulated time series models. The obtained $ARIMA(0,1,1)(0,1,1)_{12}$ model is essentially a "seasonal exponential smoothing model", which equation is:
+Despite the presence of some autocorrelation, the remanining residuals look nice. These peaks do not mean that the model is wrong, as they might appear even in simulated time series models. The obtained $ARIMA(0,1,1)(0,1,1)_{12}$ model is essentially a "seasonal exponential smoothing model", which equation is:
 
 $$ \hat{Y} = Y_{t-12} + Y_{t-1} - Y_{t-13} - \theta_1 e_{t-1} - \Theta_1 e_{t-12} + \Theta_1 \Omega_1 e_{t-13}$$
 
@@ -230,37 +228,36 @@ where $\theta_1$ is the MA(1) coefficient and $\Theta_1$ is the SMA(1) coefficie
 
 Before continuing, lets analyze if the obtained model meets the assumptions. Independence of the residuals is particularly important, as them having a mean of zero is also relevant, but can be fixed if it is not met. If the residuals have a mean different from zero, then an option is to simply add the mean to all forecasts. This way the bias problem can be solved. 
 
-A brief comment on the parameters of the Box.test function. The recommendation is to use lag=10 for non-seasonal data and lag=2m for seasonal data, where m is the period of seasonality, therefore lag=24 was chosen here. As for the fitdf parameter, it refers to "the number of degrees of freedom to be subtracted if x is a series of residuals", in our case $fitdf = p+q+P+Q = 2$.
+A brief comment on the parameters of the <i>Box.test</i> function. The recommendation is to use $lag=10$ for non-seasonal data and $lag=2m$ for seasonal data, where m is the period of seasonality, therefore $lag=24$ was chosen here. As for the $fitdf$ parameter, it refers to "the number of degrees of freedom to be subtracted if $x$ is a series of residuals", in our case $fitdf = p+q+P+Q = 2$.
 
 ```{r model1 assumptions}
 model0 = Arima(log(visados.ts), order=c(0,1,1), seasonal=list(order=c(0,1,1), period=12))
-
 t.test(model0$residuals)
 Box.test(model0$residuals, lag=24, fitdf=2)
 jarque.bera.test(model0$residuals)
 ```
 
-Results show that the residuals do not have zero mean and are not independent (the p-value resulting from the Box-Pierce test conducted on them is low enough to reject the null hypothesis of independence, but is not extremely low, however). The Jarque-Bera test indicates that these residuals are also not normal. Outsiders can noticeably alter the results of this test, so lets try again, removing the greatest outsider this time.
+Results show that the residuals do not have zero mean and are not independent (the $p$-value resulting from the Box-Pierce test conducted on them is low enough to reject the null hypothesis of independence, but is not extremely low, however). The Jarque-Bera test indicates that these residuals are also not normal. Outliers can noticeably alter the results of this test, so lets try again, removing the greatest outlier this time.
 
 ```{r model1_assumptions_b}
 which.max(model0$residuals)
 jarque.bera.test(model0$residuals[-117])
 ```
 
-As the new p-value shows, there is no evidence to reject the null hypothesis now. Therefore, residuals can indeed be considered normal if this outsider is not taken into account. Moreover, as the plot below shows, ACF and PACF functions of the residuals behave decently, only showing one relevant spike each (ideally, all spikes would be within the limits, but given that we are dealing with real world data, this results can be considered valid). 
+As the new $p$-value shows, there is no evidence to reject the null hypothesis now. Therefore, residuals can indeed be considered normal if this outlier is not taken into account. Moreover, as the plot below shows, ACF and PACF functions of the residuals behave decently, only showing one relevant spike each (ideally, all spikes would be within the limits, but given that we are dealing with real world data, this results can be considered valid). 
 
 ```{r model1_residualsplot,  fig.align='center'}
-acf2(model0$residuals)
+res = acf2(model0$residuals)
 ```
 
 ### Improving ARIMA models
 
-The ARIMA model we have until now has some upsides, in the sense that a) it is simple parameter-wise, b) was obtained following the theory and c) residuals meet most of the assumptions. Independence of these, however, has not been achieved. Because of this fact, and because ARIMA models are hard to fit, and there is no way to be sure that the most appropriate one has been found, a couple alternative methods for parameter tuning have been tried next. 
+The ARIMA model we have until now has some upsides, in the sense that a) it is simple parameter-wise, b) was obtained following the theory and c) residuals meet most of the assumptions. Independence of these, however, has not been achieved. Because of this fact and because ARIMA models are hard to fit, a couple alternative methods for parameter tuning have been tried next. 
 
 
 #### Alternative 1: Improving based on RMSE
 
-A reasonable approach is to try and find a model which offers a lower RMSE than the one we have until now (roughly, for our first model, $RMSE = 0.152$). Along this line, maintaining the already calculated parameters, we tuned them increasing their values one by one.The result was the following model, an $ARIMA(2,1,1)(1,1,1)_{12}$.
+A reasonable approach is to try and find a model which offers a lower RMSE than the one we have until now (roughly, for our first model, $RMSE = 0.152$). Along this line, maintaining at least the already calculated parameters, we tuned them increasing their values one by one. The result was the following model, an $ARIMA(2,1,1)(1,1,1)_{12}$.
 
 ```{r alt_models_1}
 # "Best RMSE model" maintaining some fixed parameters.
@@ -269,14 +266,12 @@ summary(model1)
 
 t.test(model1$residuals)
 Box.test(model1$residuals, lag=24, fitdf=5)
-jarque.bera.test(model1$residuals)
 
-# Find the outsider and remove it
-which.max(model1$residuals)
-jarque.bera.test(model1$residuals[-117])
+# Find the outlier and remove it
+jarque.bera.test(model1$residuals[-which.max(model1$residuals)])
 ```
 
-Assumptions-wise this model performs better than the previous one. While residuals still do not have a mean of zero, results of the Box-Pierce and Jarque-Bera tests (the latter after ruling out the outsider at position 117) show that they are independent and normal. Moreover, root mean squared error has been reduced, achieving a slightly lower $RMSE = 0.146$, and AIC is also somewhat lower. The downside of this model is complexity, as it uses more complex parameters than the previous one, and the gain in terms of assumptions or RMSE is arguably not significant enough to make up for that fact.
+Assumptions-wise this model performs better than the previous one. While residuals still do not have a mean of zero, results of the Box-Pierce and Jarque-Bera tests (the latter after ruling out the outlier at position 117) show that they are independent and normal. Moreover, root mean squared error has been reduced, achieving a slightly lower $RMSE = 0.146$, and AIC is also somewhat lower. The downside of this model is complexity, as it uses more complex parameters than the previous one, and the gain in terms of assumptions or RMSE is arguably not significant enough to make up for that fact.
 
 #### Alternative 2: Improving based on hypothesis-meeting
 
@@ -290,24 +285,19 @@ summary(model2)
 t.test(model2$residuals)
 ```
 
-While, according to the test, the mean is not equal to zero, further checking the results shows that it is close enough for us to consider it zero, $9.8*10^-4$.
+In this case, the zero mean of the residuals is within the confidence intervals of the one sample $t$-test, and we do not have evidence to reject the null hypothesis ($p$-value = 0.9233).
 
 ```{r alt_models_2b}
 Box.test(model2$residuals, lag=24, fitdf=6, type="L")
-jarque.bera.test(model2$residuals)
-
-# Again, find and remove the outlier
-which.max(model2$residuals)
-jarque.bera.test(model2$residuals[-117])
+# Remove the outlier and test again
+jarque.bera.test(model2$residuals[-which.max(model2$residuals)])
 ```
 
-All the assumptions are now met, with the residuals also being normal and independent. AIC and RMSE are also the lowest of all models. Surprisingly, this model contradicts the theoretical one in the sense that it does not include any seasonal differences, but in exchange it does feature seasonal AR 1 and MA 2. Finally, even the ACF and PACF functions display perfect behaviour, with no outstanding spikes, as the plot illustrates.
+All the assumptions are now met, with the residuals also being normal and independent. AIC and RMSE are also the lowest of all models. Surprisingly, this model contradicts the theoretical one in the sense that it does not include any seasonal differences, but in exchange it does feature seasonal AR(1) and MA(2). Finally, even the ACF and PACF functions display perfect behaviour, with no outstanding spikes, as the plot illustrates.
 
 ```{r alt_models_2b_acf, fig.align='center'}
-acf2(model2$residuals)
+res = acf2(model2$residuals)
 ```
-
-
 
 #### Alternative 3: auto.arima()
 
@@ -321,13 +311,11 @@ summary(model3)
 
 t.test(model3$residuals)
 Box.test(model3$residuals, lag=24, fitdf=3)
-jarque.bera.test(model3$residuals)
-# Remove the outsider and test again
-which.max(model3$residuals)
-jarque.bera.test(model3$residuals[-117])
+# Remove the outlier and test again
+jarque.bera.test(model3$residuals[-which.max(model3$residuals)])
 ```
 
-As seen above, the resulting model does have independent residuals, and their mean is very close to zero. However they are not normal, not even after removing the outsider. In addition, RMSE has increased from previous iterations, and AIC has increased drastically. All in all, there are better alternatives than this automatically fitted ARIMA.
+As seen above, the resulting model does have independent residuals, and their mean is very close to zero. However they are not normal, not even after removing the outlier. In addition, RMSE has increased from previous iterations, and AIC has increased drastically. All in all, there are better alternatives than this automatically fitted ARIMA.
 
 ### Forecasting
 
